@@ -2,7 +2,7 @@
 
 In order to re-create the results presented:
 
-Install detectron2 on Windows:
+Install [detectron2](https://github.com/facebookresearch/detectron2) on Windows:
 ```
 conda create -n detectron2_env python=3
 conda activate detectron2_env
