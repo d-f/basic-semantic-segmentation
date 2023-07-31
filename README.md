@@ -8,7 +8,7 @@ The functions were sped up by changing to the equation:
  
  IoU = TP / (TP + FN + FP)
 
- Switching from one-hot encoding functions that iterated through channel values for each pixel, determined the predicted class, one-hot encoded the channel values and updated the array to built-in torch.argmax and torch.nn.functional.one_hot methods. Now testing the model and measuring IoU and Dice for each prediction takes less than a minute.
+ They were additional sped up by switching from one-hot encoding functions that iterated through channel values for each pixel, determined the predicted class, one-hot encoded the channel values and updated the array to built-in torch.argmax and torch.nn.functional.one_hot methods. Now testing the model and measuring IoU and Dice for each prediction takes less than a minute.
 
  In order to run:
 
