@@ -12,7 +12,8 @@ The functions were sped up by changing to the equation:
 
  In order to run:
 
-- download pet dataset
+- download anaconda
+- create environment
 - set up directories
  
  ```
