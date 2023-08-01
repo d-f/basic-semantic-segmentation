@@ -1,14 +1,5 @@
 # basic-semantic-segmentation
-How speed of measuring segmentation performance was improved:
-Measuring IoU was taking an inordinate amount of time (~5 hours) by using the equation:
-
-![image](https://github.com/d-f/basic-semantic-segmentation/assets/118086192/e1dcfc95-1c94-4e78-8d1d-c97067ec4bcc)
-
-The functions were sped up by changing to the equation:
- 
- IoU = TP / (TP + FN + FP)
-
- The functions were additionally sped up by switching from one-hot encoding functions that iterated through channel values for each pixel, determined the predicted class, one-hot encoded the channel values and updated the array to built-in torch.argmax and torch.nn.functional.one_hot methods. Now testing the model and measuring IoU and Dice for each prediction takes less than a minute.
+Measuring IoU and Dice was taking an inordinate amount of time (~5 hours to evaluate the entire test set). It was found that the one hot encoding step was taking a the longest amount of time. The original function iterated through each pixel in the ground truth and prediction arrays, isolated all the values for each channel at this specific pixel location, determined the largest class, one hot encoded the channel values and updated the array. This was sped up by determining the max value for each channel in one step with torch.argmax(dim=0) and the one hot array was created with torch.nn.functional.one_hot(). This sped the time it takes to evaluate the test set from 5 hours to less than a minute with GPU acceleration.
 
  In order to run:
 
