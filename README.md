@@ -1,11 +1,10 @@
 # basic-semantic-segmentation
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Speeding Up IoU and Dice measurement
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Measuring IoU and Dice on the test set was taking an inordinate amount of time (~5 hours to evaluate the entire test set). It was found that the one hot encoding step was taking a the longest amount of time. The original function iterated through each pixel in the ground truth and prediction arrays, isolated all the values for each channel at this specific pixel location, determined the largest class, one hot encoded the channel values and updated the array. This was sped up by determining the max value for each channel in one step with torch.argmax(dim=0) and the one hot array was created with torch.nn.functional.one_hot() (see onehot_3d_array() on line 246 in utils/data_utils.py). This sped the time it takes to evaluate the test set from 5 hours to less than a minute with GPU acceleration.
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
  In order to run:
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
