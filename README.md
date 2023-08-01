@@ -12,8 +12,11 @@ The functions were sped up by changing to the equation:
 
  In order to run:
 
-- download anaconda
-- create environment
+- Download Anaconda [https://www.anaconda.com/download](https://www.anaconda.com/download)
+- Create a conda environment (in this case named segmentation_env)
+```
+conda create -n segmentation_env python=3
+```
 - set up directories
  
  ```
