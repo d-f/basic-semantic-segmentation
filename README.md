@@ -7,17 +7,17 @@ Measuring IoU and Dice on the test set was taking an inordinate amount of time (
 
  In order to run:
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-- Download Anaconda [https://www.anaconda.com/download](https://www.anaconda.com/download)
-- Create a conda environment (in this case named segmentation_env)
+- Set up environment 
+  - Download Anaconda [https://www.anaconda.com/download](https://www.anaconda.com/download)
+  - Create a conda environment (in this case named segmentation_env)
 ```
 conda create -n segmentation_env python=3
 ```
-- Download dependencies
+  - Download dependencies
 ```
 pip install -r requirements.txt
 ```
-- Set up directories
+  - Set up directories
     - Depending on OS, run either create_dirs.ps1 (for Windows) or create_dirs.sh (for Linux) and choose a "project directory" for everything to be added to, in this case "C:\\ml_projects\\fcn_segmentation\\"
 ```
 C:\ml_code\basic-semantic-segmentation\create_dirs.ps1 "C:\\ml_projects\\fcn_segmentation\\"
