@@ -4,11 +4,14 @@ import torch
 from typing import Dict
 
 
-def define_model(pre_trained: bool, num_classes: int) -> torchvision.models.segmentation.fcn_resnet50:
+def define_model(
+        pre_trained: bool, 
+        num_classes: int
+        ) -> torchvision.models.segmentation.fcn_resnet101:
     '''
     defines the model architecture
     '''
-    model = torchvision.models.segmentation.fcn_resnet50(
+    model = torchvision.models.segmentation.fcn_resnet101(
         pretrained=pre_trained, 
         num_classes=num_classes, 
         weights=None
@@ -16,18 +19,39 @@ def define_model(pre_trained: bool, num_classes: int) -> torchvision.models.segm
     return model 
 
 
-def print_model_summary(model: torchvision.models.segmentation.fcn_resnet50) -> None:
+def get_num_params(tensor_size: torch.Tensor.size) -> int:
+    num_params = 1
+    for size_idx in tensor_size:
+        num_params *= size_idx
+    return num_params
+
+
+def print_model_summary(
+        model: torchvision.models.segmentation.fcn_resnet101
+        ) -> None:
     '''
     prints the parameters and parameter size
+    should contain an equal number of trainable and non-trainable
+    parameters since the teacher network parameters are not updated
+    with gradient descent
     '''
+    trainable = 0
+    non_trainable = 0
     for param in model.named_parameters():
-        print(param[0], param[1].size())
+        if param[1].requires_grad:
+            trainable += get_num_params(param[1].size())
+        else:
+            non_trainable += get_num_params(param[1].size())
+        print(param[0], param[1].size(), param[1].requires_grad)
+
+    print("trainable parameters:", trainable)
+    print("non-trainable parameters:", non_trainable)
 
 
 def load_model(
         weight_path: Path, 
-        model: torchvision.models.segmentation.fcn_resnet50
-        ) -> torchvision.models.segmentation.fcn_resnet50:
+        model: torchvision.models.segmentation.fcn_resnet101
+        ) -> torchvision.models.segmentation.fcn_resnet101:
     '''
     loads all parameters of a model
     '''
@@ -36,7 +60,10 @@ def load_model(
     return model
 
 
-def define_optimizer(model: torchvision.models.segmentation.fcn_resnet50, learning_rate: float):    
+def define_optimizer(
+        model: torchvision.models.segmentation.fcn_resnet101, 
+        learning_rate: float
+        ) -> torch.optim.Adam:    
     '''
     returns optimizer
     '''     
