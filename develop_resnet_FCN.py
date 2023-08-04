@@ -15,23 +15,27 @@ def create_argparser() -> argparse.Namespace:
     defines the command line argument parser
     '''
     parser = argparse.ArgumentParser()
-    parser.add_argument("-pretrained", action="store_true")
-    parser.add_argument("-num_classes", type=int, default=37)
-    parser.add_argument("-batch_size", default=24)
-    parser.add_argument("-img_size", default=(256, 256))
-    parser.add_argument("-patience", default=2)
-    parser.add_argument("-result_dir", type=Path, default=Path("C:\\personal_ML\\fcn_segmentation\\results\\"))
-    parser.add_argument("-result_filename", type=str, default="resnet_50_fcn_1_results.json")
-    parser.add_argument("-lr", type=float, default=0.001)
-    parser.add_argument("-model_save_name", default="resnet50_fcn_1.pth.tar")
-    parser.add_argument("-num_epochs", default=64)
-    parser.add_argument("-data_root", default="C:\\personal_ML\\Oxford_PyTorch\\")
+    parser.add_argument("-pretrained", action="store_true") 
+    parser.add_argument("-num_classes", type=int)
+    parser.add_argument("-batch_size")
+    parser.add_argument("-img_size", default=(224, 224))
+    parser.add_argument("-patience")
+    parser.add_argument("-result_dir", type=Path)
+    parser.add_argument("-train_result_filename", type=str)
+    parser.add_argument("-test_result_filename", type=str)
+    parser.add_argument("-lr", type=float)
+    parser.add_argument("-model_save_name")
+    parser.add_argument("-num_epochs")
+    parser.add_argument("-data_root")
+    parser.add_argument("-continue_bool", action="store_true", default=False)
+    parser.add_argument("-start_epoch", type=int, default=0)
+    parser.add_argument("-weight_path")
     return parser.parse_args()
 
 
 def validate(
         val_loader: DataLoader, 
-        model: torchvision.models.segmentation.fcn_resnet50, 
+        model: torchvision.models.segmentation.fcn_resnet101, 
         device: torch.device, 
         criterion: torch.optim, 
         num_classes: int
@@ -55,7 +59,7 @@ def validate(
 
 
 def train(
-        model: torchvision.models.segmentation.fcn_resnet50, 
+        model: torchvision.models.segmentation.fcn_resnet101, 
         train_loader: DataLoader, 
         val_loader: DataLoader, 
         num_epochs: int, 
@@ -65,7 +69,9 @@ def train(
         optimizer: torch.optim, 
         device: torch.device, 
         result_dir: Path, 
-        model_save_name: str
+        model_save_name: str,
+        continue_bool: bool,
+        start_epoch: int
         ) -> Tuple[List, List]:
     ''' 
     trains model and records training and validation loss throughout training
@@ -75,7 +81,11 @@ def train(
     train_loss_list = []
     val_loss_list = []
 
-    for epoch_idx in range(num_epochs):
+    if continue_bool:
+        num_epochs += start_epoch
+        print("epoch range", start_epoch, num_epochs)
+
+    for epoch_idx in range(start_epoch, num_epochs):
             if patience == patience_counter:
                 break
             else:
@@ -83,7 +93,10 @@ def train(
                 for batch_image, batch_seg_mask in tqdm(train_loader, desc="Training"):
                     model.train()
                     batch_pred = model(batch_image.to(device))["out"]
-                    batch_onehot_segmask  = one_hot_mask(mask=batch_seg_mask[0], num_classes=num_classes).unsqueeze(dim=0)
+                    batch_onehot_segmask  = one_hot_mask(
+                        mask=batch_seg_mask[0], 
+                        num_classes=num_classes
+                        ).unsqueeze(dim=0)
                     for seg_mask in batch_seg_mask[1:]:
                         one_hot_seg = one_hot_mask(mask=seg_mask, num_classes=num_classes).unsqueeze(dim=0)
                         batch_onehot_segmask = np.concatenate([batch_onehot_segmask, one_hot_seg], axis=0)
@@ -110,7 +123,7 @@ def train(
 
 def test_model(
         test_loader: DataLoader, 
-        model: torchvision.models.segmentation.fcn_resnet50, 
+        model: torchvision.models.segmentation.fcn_resnet101, 
         device: torch.device, 
         num_classes: int, 
         result_dir: Path, 
@@ -130,17 +143,23 @@ def test_model(
             batch_iou = 0
             batch_dice = 0
             batch_pred = model(batch_image.to(device))["out"]
-            batch_onehot_segmask  = one_hot_mask(mask=batch_seg_mask[0], num_classes=num_classes).unsqueeze(dim=0)
+            batch_onehot_segmask  = one_hot_mask(
+                mask=batch_seg_mask[0], 
+                num_classes=num_classes
+                ).unsqueeze(dim=0)
             for seg_mask in batch_seg_mask[1:]:
                 one_hot_seg = one_hot_mask(mask=seg_mask, num_classes=num_classes).unsqueeze(dim=0)
                 batch_onehot_segmask = np.concatenate([batch_onehot_segmask, one_hot_seg], axis=0)
             batch_onehot_segmask = torch.tensor(batch_onehot_segmask).to(device).to(torch.float64)
             for pred_idx in range(len(batch_pred)):
-                pred = torch.nn.Softmax(dim=1)(batch_pred[pred_idx])#.cpu().detach().numpy().astype("int32")
-                mask = batch_onehot_segmask[pred_idx]#.cpu().detach().numpy().astype("int32")
-                pred = binarize_array(tensor=pred, num_classes=num_classes, device=device)
+                pred = torch.nn.Softmax(dim=1)(batch_pred[pred_idx])
+                mask = batch_onehot_segmask[pred_idx]
+                pred = onehot_3d_array(tensor=pred, num_classes=num_classes)
 
-                mean_dice, mean_iou = measure_dice_and_iou(prediction_mask=pred, ground_truth_mask=mask)
+                mean_dice, mean_iou = measure_dice_and_iou(
+                    prediction_mask=pred, 
+                    ground_truth_mask=mask
+                    )
                 batch_iou += mean_iou
                 batch_dice += mean_dice
             test_dict["IoU"] += batch_iou
@@ -164,6 +183,9 @@ def main():
     optimizer = define_optimizer(model=model, learning_rate=args.lr)
     device = define_device()
     model = model.to(device)
+    if args.continue_bool:
+        model = load_model(weight_path=args.weight_path, model=model)
+    print_model_summary(model=model)
     train_loss_list, val_loss_list = train(
         model=model, 
         train_loader=train_loader,  
@@ -175,8 +197,18 @@ def main():
         optimizer=optimizer,
         device=device,
         result_dir=args.result_dir,
-        model_save_name=args.model_save_name
+        model_save_name=args.model_save_name,
+        continue_bool=args.continue_bool,
+        start_epoch=args.start_epoch
         )
+    save_train_results(
+        train_loss_list=train_loss_list,
+        val_loss_list=val_loss_list,
+        file_path=args.result_dir.joinpath(args.train_result_filename),
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
+        continue_bool=args.continue_bool
+    )
     test_dict = test_model(
         test_loader=test_loader, 
         model=model, 
@@ -185,11 +217,8 @@ def main():
         result_dir=args.result_dir,
         model_save_name=args.model_save_name
         )
-    print(test_dict)
-    save_results(
-        train_loss_list=train_loss_list,
-        val_loss_list=val_loss_list,
-        file_path=args.result_dir.joinpath(args.result_filename),
+    save_test_results(
+        file_path=args.result_dir.joinpath(args.test_result_filename),
         test_dict=test_dict
     )
 
