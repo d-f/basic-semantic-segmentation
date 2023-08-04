@@ -29,11 +29,11 @@ bash create_dirs.sh
 ```
 - Train a model
  ```
-bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\"
+python develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\"
 ```
 - Resume training on a specific epoch: (load previous model / optimizer parameters, append additional training data to train result file and re-create test file)
 ```
-bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\" --continue_bool -start_epoch 32
+python develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\" --continue_bool -start_epoch 32
 ```
 
 Fully convolutional network background information
