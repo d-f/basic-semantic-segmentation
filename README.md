@@ -36,7 +36,7 @@ bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience
 bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\" --continue_bool -start_epoch 32
 ```
 
-Fully connected network background information
+Fully convolutional network background information
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Fully convolutional networks are made up entirely of convolutional layers. They generally follow an encoder-decoder structure where the encoder first distills an image down to a set of feature maps similar to the first section of convolutional neural networks with classifiers. The decoder makes use of deconvolutions (or transpose convolutions) to turn the set of feature maps into a larger segmentation map. The stride length of a convolution determines the amount the filter or kernel moves across the input at a time. Transpose convolutions differ from convolutions in that their stride length is less than one, resulting in a larger output than input.
