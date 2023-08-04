@@ -7,6 +7,8 @@ import torchvision.transforms.functional as TF
 from torch.utils.data import DataLoader
 from pathlib import Path
 import json
+import math
+
 
 
 class CustomDataset(torchvision.datasets.OxfordIIITPet):
@@ -19,7 +21,13 @@ class CustomDataset(torchvision.datasets.OxfordIIITPet):
             transform: torchvision.transforms, 
             target_types: List
             ):
-        super().__init__(root=root, split=split, download=download, transform=transform, target_types=target_types)
+        super().__init__(
+            root=root, 
+            split=split, 
+            download=download, 
+            transform=transform, 
+            target_types=target_types
+            )
         self.img_size = img_size
 
     def __getitem__(self, idx: int) -> Tuple[torch.tensor, torch.tensor]:
@@ -32,7 +40,11 @@ class CustomDataset(torchvision.datasets.OxfordIIITPet):
         array_seg_mask[array_seg_mask == 3] = 1
 
         if self.transforms:
-            image, seg_mask = oxford_transform(image=image, seg_mask=array_seg_mask, img_size=self.img_size)
+            image, seg_mask = oxford_transform(
+                image=image, 
+                seg_mask=array_seg_mask, 
+                img_size=self.img_size
+                )
 
         return image, seg_mask
 
@@ -52,14 +64,18 @@ def oxford_transform(
     return image, seg_mask
 
 
-def create_dataloaders(batch_size: int, img_size: Tuple, data_root: str) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def create_dataloaders(
+        batch_size: int, 
+        img_size: Tuple, 
+        data_root: str
+        ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     '''
     creates and partitions train, validation and test data loaders
     '''
     trainval_dataset = CustomDataset(
         root=data_root,
         split="trainval",
-        download=False,
+        download=True, # will skip downloading if already downloaded
         transform=True,
         target_types=["segmentation"],
         img_size=img_size
@@ -67,7 +83,7 @@ def create_dataloaders(batch_size: int, img_size: Tuple, data_root: str) -> Tupl
     test_dataset = CustomDataset(
         root=data_root,
         split="test",
-        download=False,
+        download=True, # will skip downloading if already downloaded
         transform=True,
         target_types=["segmentation"],
         img_size=img_size
@@ -115,13 +131,51 @@ def one_hot_mask(mask: torch.tensor, num_classes: int) -> torch.tensor:
     new_mask_array = np.expand_dims(a=np.array(class_row_list), axis=0)
     for class_idx in range(1, num_classes):
         class_row_list = get_class_row(class_idx=class_idx, mask=mask)
-        new_mask_array = np.concatenate([new_mask_array, np.expand_dims(a=np.array(class_row_list), axis=0)], axis=0)
+        new_mask_array = np.concatenate([
+            new_mask_array, 
+            np.expand_dims(a=np.array(class_row_list), axis=0)], 
+            axis=0
+            )
     return torch.tensor(new_mask_array)
 
 
-def save_results(
+def save_train_results(
         train_loss_list: List, 
-        val_loss_list: List, 
+        val_loss_list: List,
+        file_path: Path,
+        continue_bool: bool,
+        batch_size: int,
+        learning_rate: float
+        ) -> None:
+    '''
+    saves results from developing model into a JSON file
+    '''
+    if continue_bool:
+        with open(file_path, mode="r") as opened_json:
+            json_dict = json.load(opened_json)
+        with open(file_path, mode="w") as opened_json:
+            if not "batch size" in list(json_dict.keys()):
+                json_dict["batch size"] = batch_size
+            if not "learning rate" in list(json_dict.keys()):
+                json_dict["learning rate"] = learning_rate
+            
+            json_dict["train loss"] += train_loss_list
+            json_dict["validation loss"] += val_loss_list
+            json_obj = json.dumps(json_dict)
+            opened_json.write(json_obj)
+    else:
+        with open(file_path, mode="w") as opened_json:
+            json_dict = {
+                "train loss": train_loss_list,
+                "validation loss": val_loss_list,
+                "batch size": batch_size,
+                "learning rate": learning_rate
+            }
+            json_dict = json.dumps(json_dict)
+            opened_json.write(json_dict) 
+
+
+def save_test_results(
         test_dict: Dict, 
         file_path: Path
         ) -> None:
@@ -129,13 +183,12 @@ def save_results(
     saves results from developing model into a JSON file
     '''
     with open(file_path, mode="w") as opened_json:
-        json_obj = {
-            "train loss": train_loss_list,
-            "validation loss": val_loss_list,
+        json_dict = {
             "test dice": test_dict["Dice"],
             "test iou": test_dict["IoU"]
         }
-        json.dump(json_obj, opened_json) 
+        json_obj = json.dumps(json_dict)
+        opened_json.write(json_obj) 
 
 
 def measure_dice_and_iou(
@@ -150,9 +203,10 @@ def measure_dice_and_iou(
     iou_per_class = []
     num_classes = ground_truth_mask.shape[0]
     for class_idx in range(num_classes):
-
-        prod = ground_truth_mask[class_idx] * prediction_mask[class_idx] # true positives will be 1, all else 0
-        diff = ground_truth_mask[class_idx] - prediction_mask[class_idx] # fp will be -1, fn will be 1 
+        # true positives will be 1, all else 0
+        prod = ground_truth_mask[class_idx] * prediction_mask[class_idx] 
+        # fp will be -1, fn will be 1
+        diff = ground_truth_mask[class_idx] - prediction_mask[class_idx]  
         counts = torch.unique(input=diff, return_counts=True)
         
         tp = torch.sum(prod.flatten())
@@ -171,53 +225,26 @@ def measure_dice_and_iou(
         else:
             fp = 0
         if one_idx != None:
-            fn = counts[1][1]
+            fn = counts[1][one_idx]
         else:
             fn = 0
 
-        dice = (2*tp) / ((2*tp) + fn + fp) 
-        dice_per_class.append(dice)
+        dice = (2*tp) / ((2*tp) + fn + fp)
+        if not math.isnan(dice):
+            dice_per_class.append(dice)
         
         iou = tp / (tp + fp + fn)
-        iou_per_class.append(iou)
+        if not math.isnan(iou):
+            iou_per_class.append(iou)
 
-    return torch.mean(torch.tensor(dice_per_class)), torch.mean(torch.tensor(iou_per_class))
+    mean_dice = torch.mean(torch.tensor(dice_per_class)).detach().numpy()
+    mean_iou = torch.mean(torch.tensor(iou_per_class)).detach().numpy()
 
-
-def determine_class(indexed_tensor: np.array) -> torch.tensor:
-    '''
-    determines the largest index of a tensor
-    '''
-    return torch.argmax(indexed_tensor)
+    return mean_dice, mean_iou
 
 
-def one_hot_encode(class_int: int, num_classes: int) -> torch.tensor:
-    '''
-    creates a one hot encodes tensor
-    '''
-    tensor_row = torch.tensor([0 for x in range(num_classes)])
-    tensor_row[class_int-1] = 1
-    return tensor_row
-
-
-def update_tensor(one_hot_tensor: torch.tensor, tensor: torch.tensor, x: int, y: int):
-    '''
-    updates tensor values
-    '''
-    tensor[:, x, y] = one_hot_tensor
-    return tensor
-
-
-def binarize_array(tensor: torch.tensor, num_classes: int, device: torch.device) -> torch.tensor:
-    '''
-    updates each pixel in the mask as the one hot encoded vector along the channel dimension
-    '''
-    for chan1_idx in range(tensor.shape[1]):
-        for chan2_idx in range(tensor.shape[2]):
-            class_int = determine_class(torch.tensor([x[:][chan1_idx][chan2_idx] for x in tensor]).to(device))
-            one_hot_tensor = one_hot_encode(
-                class_int=class_int,
-                num_classes=num_classes
-            )
-            array = update_tensor(one_hot_tensor=one_hot_tensor, tensor=tensor, x=chan1_idx, y=chan2_idx)
-    return array
+def onehot_3d_array(tensor, num_classes):
+    return torch.nn.functional.one_hot(
+        input=torch.argmax(tensor, dim=0),
+        num_classes=num_classes
+    ).permute(2, 0, 1)
