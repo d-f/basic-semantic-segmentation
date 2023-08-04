@@ -13,20 +13,27 @@ Measuring IoU and Dice on the test set was taking an inordinate amount of time (
 ```
 conda create -n segmentation_env python=3
 ```
-- set up directories
- 
+- Download dependencies
+```
+pip install -r requirements.txt
+```
+- Set up directories: depending on OS, run either create_dirs.ps1 (for Windows) or create_dirs.sh (for Linux) and choose a "project directory" for everything to be added to, in this case "C:\\ml_projects\\fcn_segmentation\\"
+```
+C:\ml_code\basic-semantic-segmentation\create_dirs.ps1 "C:\\ml_projects\\fcn_segmentation\\"
+```
+or  
+```
+bash create_dirs.sh
+"/C/ml_projects/fcn_segmentation/"
+```
+- Train a model
  ```
-bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "" -train_result_filename "" -test_result_filename ""
--lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root ""
+bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\"
 ```
-To resume training on a specific epoch:
+- Resume training on a specific epoch:
 ```
-bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "" -train_result_filename "" -test_result_filename ""
--lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "" --continue_bool -start_epoch 32
+bash develop_resnet_FCN.py --pretrained -num_classes 37 -batch_size 20 -patience 5 -result_dir "C:\\ml_projects\\fcn_segmentation\\results\\" -train_result_filename "resnet101_fcn_1_train_results.json" -test_result_filename "resnet101_fcn_1_test_results.json" -lr 1e-4 -model_save_name resnet101_fcn_1.pth.tar -num_epochs 64 -data_root "C:\\ml_projects\\fcn_segmentation\\pcam_data\\" --continue_bool -start_epoch 32
 ```
-
- To adapt to a custom dataset:
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Fully connected network background information
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
