@@ -13,6 +13,11 @@ Measuring IoU and Dice on the test set was taking an inordinate amount of time (
 ```
 conda create -n segmentation_env python=3
 ```
+  - Clone this repository to any directory, in this case C:\\ml_code\\basic-semantic-segmentation\\
+```
+cd C:\ml_code\
+git clone https://github.com/d-f/basic-semantic-segmentation.git
+```
   - Download dependencies
 ```
 pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
