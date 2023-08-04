@@ -15,7 +15,7 @@ conda create -n segmentation_env python=3
 ```
   - Download dependencies
 ```
-pip install -r requirements.txt
+pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
 ```
   - Set up directories
     - Depending on OS, run either create_dirs.ps1 (for Windows) or create_dirs.sh (for Linux) and choose a "project directory" for everything to be added to, in this case "C:\\ml_projects\\fcn_segmentation\\"
