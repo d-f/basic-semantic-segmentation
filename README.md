@@ -20,6 +20,7 @@ git clone https://github.com/d-f/basic-semantic-segmentation.git
 ```
   - Download dependencies
 ```
+cd basic-semantic-segmantation
 pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
 ```
   - Set up directories
