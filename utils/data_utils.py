@@ -32,6 +32,7 @@ class CustomDataset(torchvision.datasets.OxfordIIITPet):
 
     def __getitem__(self, idx: int) -> Tuple[torch.tensor, torch.tensor]:
         image = Image.open(self._images[idx]).convert("RGB")
+        class_idx = torch.tensor(self._labels[idx])
         # 1 = background, 2 = pet, 3 = border
         seg_mask = Image.open(self._segs[idx]).resize(self.img_size)
         array_seg_mask = np.array(seg_mask)
@@ -46,7 +47,7 @@ class CustomDataset(torchvision.datasets.OxfordIIITPet):
                 img_size=self.img_size
                 )
 
-        return image, seg_mask
+        return image, seg_mask, class_idx
 
 
 def oxford_transform(
@@ -77,7 +78,7 @@ def create_dataloaders(
         split="trainval",
         download=True, # will skip downloading if already downloaded
         transform=True,
-        target_types=["segmentation"],
+        target_types=["segmentation", "category"],
         img_size=img_size
     )
     test_dataset = CustomDataset(
@@ -85,7 +86,7 @@ def create_dataloaders(
         split="test",
         download=True, # will skip downloading if already downloaded
         transform=True,
-        target_types=["segmentation"],
+        target_types=["segmentation", "category"],
         img_size=img_size
     )
     # combine datasets
@@ -121,22 +122,6 @@ def get_class_row(class_idx: int, mask: torch.tensor) -> List:
         row[row != np.uint8(class_idx)] = 0.
         class_row_list.append(row)
     return class_row_list
-
-
-def one_hot_mask(mask: torch.tensor, num_classes: int) -> torch.tensor:
-    '''
-    one hot encode segmentation mask
-    '''
-    class_row_list = get_class_row(class_idx=0, mask=mask)
-    new_mask_array = np.expand_dims(a=np.array(class_row_list), axis=0)
-    for class_idx in range(1, num_classes):
-        class_row_list = get_class_row(class_idx=class_idx, mask=mask)
-        new_mask_array = np.concatenate([
-            new_mask_array, 
-            np.expand_dims(a=np.array(class_row_list), axis=0)], 
-            axis=0
-            )
-    return torch.tensor(new_mask_array)
 
 
 def save_train_results(
@@ -184,7 +169,7 @@ def save_test_results(
     '''
     with open(file_path, mode="w") as opened_json:
         json_dict = {
-            "test dice": test_dict["Dice"],
+            # "test dice": test_dict["Dice"],
             "test iou": test_dict["IoU"]
         }
         json_obj = json.dumps(json_dict)
@@ -243,8 +228,35 @@ def measure_dice_and_iou(
     return mean_dice, mean_iou
 
 
-def onehot_3d_array(tensor, num_classes):
-    return torch.nn.functional.one_hot(
-        input=torch.argmax(tensor, dim=0),
-        num_classes=num_classes
-    ).permute(2, 0, 1)
+def onehot_pred_tensor(tensor, num_classes):
+    new_ten = torch.empty(size=[num_classes, tensor.shape[1], tensor.shape[2]])
+    for x_pos in range(tensor.shape[1]):
+        for y_pos in range(tensor.shape[2]):
+            new_ten[:, x_pos, y_pos] = torch.nn.functional.one_hot(
+                input=torch.argmax(tensor[:, x_pos, y_pos]), num_classes=num_classes
+                )
+    return new_ten
+
+
+def onehot_pred(batch_pred, num_classes):
+    new_batch = torch.empty(size=(batch_pred.shape[0], num_classes, batch_pred.shape[2], batch_pred.shape[3]))
+    for batch_idx in range(batch_pred.shape[0]):
+        new_batch[batch_idx, :, :, :] = onehot_pred_tensor(batch_pred[batch_idx], num_classes)    
+    return new_batch
+
+
+def onehot_mask_tensor(tensor, num_classes, class_idx):
+    new_ten = torch.empty(size=[num_classes, tensor.shape[0], tensor.shape[1]])
+    for x_pos in range(tensor.shape[0]):
+        for y_pos in range(tensor.shape[1]):
+            new_ten[:, x_pos, y_pos] = torch.nn.functional.one_hot(input=class_idx, num_classes=num_classes)
+    return new_ten
+
+
+def onehot_segmask(batch_mask, batch_class, num_classes):
+    new_batch = torch.empty(size=(batch_mask.shape[0], num_classes, batch_mask.shape[1], batch_mask.shape[2]))
+    for batch_idx in range(batch_mask.shape[0]):
+        new_batch[batch_idx, :, :, :] = onehot_mask_tensor(
+            batch_mask[batch_idx], num_classes, batch_class[batch_idx]
+            )    
+    return new_batch
